@@ -1,0 +1,5 @@
+<?php
+
+use Micromus\KafkaBusRepeater\Tests\TestCase;
+
+uses(TestCase::class)->in(__DIR__);
