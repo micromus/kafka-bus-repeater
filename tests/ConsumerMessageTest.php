@@ -11,6 +11,7 @@ use Micromus\KafkaBus\Producers\ProducerStreamFactory;
 use Micromus\KafkaBus\Support\Resolvers\NativeResolver;
 use Micromus\KafkaBus\Testing\Connections\ConnectionFaker;
 use Micromus\KafkaBus\Testing\Connections\ConnectionRegistryFaker;
+use Micromus\KafkaBus\Testing\Consumers\MessageBuilder;
 use Micromus\KafkaBus\Testing\Messages\VoidConsumerHandlerFaker;
 use Micromus\KafkaBus\Topics\Topic;
 use Micromus\KafkaBus\Topics\TopicRegistry;
@@ -100,14 +101,14 @@ test('can repeat consume message', function () {
     $topicRegistry = (new TopicRegistry())
         ->add(new Topic('production.fact.products.1', 'products'));
 
-    $connectionFaker = new ConnectionFaker($topicRegistry);
+    $connectionFaker = new ConnectionFaker();
 
-    $message = new Message();
-    $message->payload = 'test-message';
-    $message->headers = ['foo' => 'bar'];
-    $message->partition = 5;
-    $message->offset = 0;
-    $message->topic_name = 'production.fact.products.1';
+    $message = MessageBuilder::for($topicRegistry)
+        ->build([
+            'topic_name' => 'products',
+            'payload' => 'test-message',
+            'headers' => ['foo' => 'bar'],
+        ]);
 
     $workerRegistry = (new Bus\Listeners\Workers\WorkerRegistry())
         ->add(
