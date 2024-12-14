@@ -2,33 +2,37 @@
 
 namespace Micromus\KafkaBusRepeater\Repeaters;
 
-use Micromus\KafkaBusRepeater\Exceptions\ConsumerMessageRepeatFailedException;
-use Micromus\KafkaBusRepeater\Interfaces\ConsumerMessageRepositoryInterface;
+use Micromus\KafkaBusRepeater\Exceptions\ConsumerMessageFailedException;
+use Micromus\KafkaBusRepeater\Interfaces\ConsumerMessageFailedRepositoryInterface;
+use Micromus\KafkaBusRepeater\Interfaces\Messages\FailedConsumerMessageInterface;
 use Micromus\KafkaBusRepeater\Interfaces\Repeaters\RepeaterInterface;
-use Micromus\KafkaBusRepeater\Messages\RepeatConsumerMessage;
 use Throwable;
 
 class Repeater implements RepeaterInterface
 {
     public function __construct(
-        protected ConsumerMessageRepositoryInterface $consumerMessageRepository,
+        protected ConsumerMessageFailedRepositoryInterface $consumerMessageRepository,
         protected RepeaterHandlers $repeaterHandlers
     ) {
     }
 
-    public function handle(RepeatConsumerMessage $repeatConsumerMessage): void
+    public function handle(FailedConsumerMessageInterface $repeatConsumerMessage): void
     {
         try {
             $messageHandler = $this->repeaterHandlers
-                ->getOrCreateMessageHandler($repeatConsumerMessage->workerName);
+                ->getOrCreateMessageHandler($repeatConsumerMessage->workerName());
 
-            $messageHandler->handle($repeatConsumerMessage->consumerMessage);
+            $messageHandler->handle($repeatConsumerMessage);
 
             $this->consumerMessageRepository
-                ->delete($repeatConsumerMessage->id);
+                ->delete($repeatConsumerMessage->id());
         }
         catch (Throwable $exception) {
-            throw  new ConsumerMessageRepeatFailedException($repeatConsumerMessage, $exception);
+            if ($exception instanceof ConsumerMessageFailedException) {
+                throw $exception;
+            }
+
+            throw new ConsumerMessageFailedException($repeatConsumerMessage, $exception);
         }
     }
 }

@@ -2,16 +2,17 @@
 
 namespace Micromus\KafkaBusRepeater\Interfaces\Repeaters;
 
-use Micromus\KafkaBusRepeater\Exceptions\ConsumerMessageRepeatFailedException;
-use Micromus\KafkaBusRepeater\Messages\RepeatConsumerMessage;
+use Micromus\KafkaBusRepeater\Exceptions\ConsumerMessageFailedException;
+use Micromus\KafkaBusRepeater\Interfaces\Messages\FailedConsumerMessageInterface;
+use Micromus\KafkaBusRepeater\Messages\FailedConsumerMessage;
 
 interface RepeaterInterface
 {
     /**
-     * @param RepeatConsumerMessage $repeatConsumerMessage
+     * @param FailedConsumerMessageInterface $repeatConsumerMessage
      * @return void
      *
-     * @throws ConsumerMessageRepeatFailedException
+     * @throws ConsumerMessageFailedException
      */
-    public function handle(RepeatConsumerMessage $repeatConsumerMessage): void;
+    public function handle(FailedConsumerMessageInterface $repeatConsumerMessage): void;
 }

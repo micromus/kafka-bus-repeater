@@ -2,7 +2,7 @@
 
 namespace Micromus\KafkaBusRepeater\Repeaters;
 
-use Micromus\KafkaBusRepeater\Interfaces\ConsumerMessageRepositoryInterface;
+use Micromus\KafkaBusRepeater\Interfaces\ConsumerMessageFailedRepositoryInterface;
 use Micromus\KafkaBusRepeater\Interfaces\Repeaters\RepeaterInterface;
 use Micromus\KafkaBusRepeater\Interfaces\Repeaters\RepeaterStreamInterface;
 
@@ -12,7 +12,7 @@ class RepeaterStream implements RepeaterStreamInterface
 
     public function __construct(
         protected RepeaterInterface $repeater,
-        protected ConsumerMessageRepositoryInterface $consumerMessageRepository,
+        protected ConsumerMessageFailedRepositoryInterface $consumerMessageFailedRepository,
         protected $timeToSleep = 60
     ) {
     }
@@ -25,7 +25,7 @@ class RepeaterStream implements RepeaterStreamInterface
     public function process(): void
     {
         do {
-            $repeatConsumerMessage = $this->consumerMessageRepository
+            $repeatConsumerMessage = $this->consumerMessageFailedRepository
                 ->get();
 
             if (is_null($repeatConsumerMessage)) {

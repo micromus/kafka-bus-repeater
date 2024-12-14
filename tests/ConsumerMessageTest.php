@@ -1,71 +1,80 @@
 <?php
 
 use Micromus\KafkaBus\Bus;
+use Micromus\KafkaBus\BusLogger;
 use Micromus\KafkaBus\Consumers\ConsumerStreamFactory;
 use Micromus\KafkaBus\Consumers\Messages\ConsumerMessage;
 use Micromus\KafkaBus\Consumers\Messages\ConsumerMessageHandlerFactory;
-use Micromus\KafkaBus\Consumers\Messages\ConsumerMeta;
 use Micromus\KafkaBus\Consumers\Router\ConsumerRouterFactory;
-use Micromus\KafkaBus\Messages\MessagePipelineFactory;
+use Micromus\KafkaBus\Pipelines\PipelineFactory;
 use Micromus\KafkaBus\Producers\ProducerStreamFactory;
-use Micromus\KafkaBus\Support\Resolvers\NativeResolver;
 use Micromus\KafkaBus\Testing\Connections\ConnectionFaker;
 use Micromus\KafkaBus\Testing\Connections\ConnectionRegistryFaker;
 use Micromus\KafkaBus\Testing\Consumers\MessageBuilder;
-use Micromus\KafkaBus\Testing\Messages\VoidConsumerHandlerFaker;
 use Micromus\KafkaBus\Topics\Topic;
 use Micromus\KafkaBus\Topics\TopicRegistry;
 use Micromus\KafkaBus\Uuid\RandomUuidGenerator;
-use Micromus\KafkaBusRepeater\Messages\RepeatConsumerMessage;
-use Micromus\KafkaBusRepeater\Messages\RepeatConsumerMessageHandlerFactory;
+use Micromus\KafkaBusRepeater\Middlewares\ConsumerMessageCommiterMiddleware;
+use Micromus\KafkaBusRepeater\Middlewares\ConsumerMessageFailedSaverMiddleware;
 use Micromus\KafkaBusRepeater\Repeaters\Repeater;
 use Micromus\KafkaBusRepeater\Repeaters\RepeaterHandlers;
-use Micromus\KafkaBusRepeater\Testing\ArrayConsumerMessageRepository;
-use Micromus\KafkaBusRepeater\Testing\ThrowableConsumerHandler;
-use RdKafka\Message;
+use Micromus\KafkaBusRepeater\Testing\Messages\ThrowableConsumerHandler;
+use Micromus\KafkaBusRepeater\Testing\RepeaterResolver;
+use Micromus\KafkaBusRepeater\Testing\Repositories\ArrayConsumerMessageFailedRepository;
+use Micromus\KafkaBusRepeater\Testing\Repositories\ArrayConsumerMessageRepository;
+use Psr\Log\NullLogger;
 
 test('can consume message', function () {
     $topicRegistry = (new TopicRegistry())
         ->add(new Topic('production.fact.products.1', 'products'));
 
-    $connectionFaker = new ConnectionFaker($topicRegistry);
+    $connectionFaker = new ConnectionFaker();
 
-    $message = new Message();
-    $message->payload = 'test-message';
-    $message->headers = ['foo' => 'bar'];
-    $message->partition = 5;
-    $message->offset = 0;
+    $message = MessageBuilder::for($topicRegistry)
+        ->build([
+            'payload' => 'test-message',
+            'headers' => ['foo' => 'bar'],
+            'topic_name' => 'products',
+        ]);
 
-    $connectionFaker->addMessage('products', $message);
+    $connectionFaker->addMessage($message);
 
     $workerRegistry = (new Bus\Listeners\Workers\WorkerRegistry())
         ->add(
             new Bus\Listeners\Workers\Worker(
                 'default-listener',
                 (new Bus\Listeners\Workers\WorkerRoutes())
-                    ->add(new Bus\Listeners\Workers\Route('products', ThrowableConsumerHandler::class))
+                    ->add(new Bus\Listeners\Workers\Route('products', ThrowableConsumerHandler::class)),
+                new Bus\Listeners\Workers\Options(middlewares: [ConsumerMessageFailedSaverMiddleware::class])
             )
         );
 
-    $consumerMessageRepository = new ArrayConsumerMessageRepository();
+    $consumerMessageRepository = new ArrayConsumerMessageFailedRepository();
+
+    $resolver = new RepeaterResolver(
+        $consumerMessageRepository,
+        new ArrayConsumerMessageRepository(),
+        new RandomUuidGenerator(),
+        new BusLogger(new NullLogger())
+    );
 
     $bus = new Bus(
         new Bus\ThreadRegistry(
             new ConnectionRegistryFaker($connectionFaker),
             new Bus\Publishers\PublisherFactory(
-                new ProducerStreamFactory(new MessagePipelineFactory(new NativeResolver())),
+                new ProducerStreamFactory(new PipelineFactory($resolver)),
                 $topicRegistry
             ),
             new Bus\Listeners\ListenerFactory(
                 new ConsumerStreamFactory(
-                    new RepeatConsumerMessageHandlerFactory(
-                        new ConsumerMessageHandlerFactory(
-                            new MessagePipelineFactory(new NativeResolver()),
-                            new ConsumerRouterFactory(new NativeResolver(), $topicRegistry)
-                        ),
-                        $consumerMessageRepository,
-                        new RandomUuidGenerator()
-                    )
+                    new ConsumerMessageHandlerFactory(
+                        new PipelineFactory($resolver),
+                        new ConsumerRouterFactory(
+                            $resolver,
+                            new PipelineFactory($resolver),
+                            $topicRegistry
+                        )
+                    ),
                 ),
                 $workerRegistry
             )
@@ -73,12 +82,12 @@ test('can consume message', function () {
         'default'
     );
 
-    $bus->listener('default-listener')
+    $bus->createListener('default-listener')
         ->listen();
 
     expect($connectionFaker->committedMessages)
         ->toHaveCount(1)
-        ->and($connectionFaker->committedMessages['production.fact.products.1'][0])
+        ->and($connectionFaker->committedMessages['production.fact.products.1'][0]->original())
         ->toHaveProperties([
             'payload' => 'test-message',
             'headers' => ['foo' => 'bar'],
@@ -90,54 +99,23 @@ test('can consume message', function () {
         ->toHaveCount(1)
         ->and($savedConsumerMessages[0])
         ->toHaveProperty('workerName', 'default-listener')
-        ->and($savedConsumerMessages[0]->consumerMessage)
+        ->and($savedConsumerMessages[0]->original())
         ->toHaveProperties([
             'payload' => 'test-message',
             'headers' => ['foo' => 'bar'],
         ]);
-});
-
-test('can repeat consume message', function () {
-    $topicRegistry = (new TopicRegistry())
-        ->add(new Topic('production.fact.products.1', 'products'));
-
-    $connectionFaker = new ConnectionFaker();
-
-    $message = MessageBuilder::for($topicRegistry)
-        ->build([
-            'topic_name' => 'products',
-            'payload' => 'test-message',
-            'headers' => ['foo' => 'bar'],
-        ]);
-
-    $workerRegistry = (new Bus\Listeners\Workers\WorkerRegistry())
-        ->add(
-            new Bus\Listeners\Workers\Worker(
-                'default-listener',
-                (new Bus\Listeners\Workers\WorkerRoutes())
-                    ->add(new Bus\Listeners\Workers\Route('products', VoidConsumerHandlerFaker::class))
-            )
-        );
-
-    $consumerMessageRepository = new ArrayConsumerMessageRepository();
-
-    $consumerMessageRepository->repeatConsumerMessages[] = new RepeatConsumerMessage(
-        id: '800-900',
-        workerName: 'default-listener',
-        consumerMessage: new ConsumerMessage(
-            $message->payload,
-            $message->headers,
-            new ConsumerMeta($message)
-        )
-    );
 
     $repeater = new Repeater(
         $consumerMessageRepository,
         new RepeaterHandlers(
             $workerRegistry,
             new ConsumerMessageHandlerFactory(
-                new MessagePipelineFactory(new NativeResolver()),
-                new ConsumerRouterFactory(new NativeResolver(), $topicRegistry)
+                new PipelineFactory($resolver),
+                new ConsumerRouterFactory(
+                    $resolver,
+                    new PipelineFactory($resolver),
+                    $topicRegistry
+                )
             )
         )
     );
@@ -146,4 +124,75 @@ test('can repeat consume message', function () {
 
     expect($consumerMessageRepository->repeatConsumerMessages)
         ->toBeEmpty();
+});
+
+test('consume message not read if message already read', function () {
+    $topicRegistry = (new TopicRegistry())
+        ->add(new Topic('production.fact.products.1', 'products'));
+
+    $connectionFaker = new ConnectionFaker();
+
+    $message = MessageBuilder::for($topicRegistry)
+        ->build([
+            'payload' => 'test-message',
+            'headers' => ['foo' => 'bar'],
+            'topic_name' => 'products',
+        ]);
+
+    $connectionFaker->addMessage($message);
+
+    $workerRegistry = (new Bus\Listeners\Workers\WorkerRegistry())
+        ->add(
+            new Bus\Listeners\Workers\Worker(
+                'default-listener',
+                (new Bus\Listeners\Workers\WorkerRoutes())
+                    ->add(new Bus\Listeners\Workers\Route('products', ThrowableConsumerHandler::class)),
+                new Bus\Listeners\Workers\Options(middlewares: [ConsumerMessageCommiterMiddleware::class])
+            )
+        );
+
+    $consumerMessageRepository = new ArrayConsumerMessageRepository();
+    $consumerMessageRepository->commit(new ConsumerMessage($message));
+
+    $resolver = new RepeaterResolver(
+        new ArrayConsumerMessageFailedRepository(),
+        $consumerMessageRepository,
+        new RandomUuidGenerator(),
+        new BusLogger(new NullLogger())
+    );
+
+    $bus = new Bus(
+        new Bus\ThreadRegistry(
+            new ConnectionRegistryFaker($connectionFaker),
+            new Bus\Publishers\PublisherFactory(
+                new ProducerStreamFactory(new PipelineFactory($resolver)),
+                $topicRegistry
+            ),
+            new Bus\Listeners\ListenerFactory(
+                new ConsumerStreamFactory(
+                    new ConsumerMessageHandlerFactory(
+                        new PipelineFactory($resolver),
+                        new ConsumerRouterFactory(
+                            $resolver,
+                            new PipelineFactory($resolver),
+                            $topicRegistry
+                        )
+                    ),
+                ),
+                $workerRegistry
+            )
+        ),
+        'default'
+    );
+
+    $bus->createListener('default-listener')
+        ->listen();
+
+    expect($connectionFaker->committedMessages)
+        ->toHaveCount(1)
+        ->and($connectionFaker->committedMessages['production.fact.products.1'][0]->original())
+        ->toHaveProperties([
+            'payload' => 'test-message',
+            'headers' => ['foo' => 'bar'],
+        ]);
 });

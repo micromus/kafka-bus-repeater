@@ -2,13 +2,11 @@
 
 namespace Micromus\KafkaBusRepeater\Interfaces;
 
-use Micromus\KafkaBusRepeater\Messages\RepeatConsumerMessage;
+use Micromus\KafkaBus\Interfaces\Consumers\Messages\ConsumerMessageInterface;
 
 interface ConsumerMessageRepositoryInterface
 {
-    public function get(): ?RepeatConsumerMessage;
+    public function commit(ConsumerMessageInterface $message): void;
 
-    public function save(RepeatConsumerMessage $consumerMessage): void;
-
-    public function delete(string $id): void;
+    public function exists(ConsumerMessageInterface $message): bool;
 }

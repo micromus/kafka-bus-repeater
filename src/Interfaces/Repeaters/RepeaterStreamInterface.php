@@ -2,14 +2,14 @@
 
 namespace Micromus\KafkaBusRepeater\Interfaces\Repeaters;
 
-use Micromus\KafkaBusRepeater\Exceptions\ConsumerMessageRepeatFailedException;
+use Micromus\KafkaBusRepeater\Exceptions\ConsumerMessageFailedException;
 
 interface RepeaterStreamInterface
 {
     /**
      * @return void
      *
-     * @throws ConsumerMessageRepeatFailedException
+     * @throws ConsumerMessageFailedException
      */
     public function process(): void;
 
