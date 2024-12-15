@@ -13,7 +13,7 @@ class RepeaterConsumerStream implements RepeaterConsumerStreamInterface
     public function __construct(
         protected RepeaterConsumerInterface                $repeater,
         protected ConsumerMessageFailedRepositoryInterface $consumerMessageFailedRepository,
-        protected                                          $timeToSleep = 60
+        protected $timeToSleep = 60
     ) {
     }
 
