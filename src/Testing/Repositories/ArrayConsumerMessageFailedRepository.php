@@ -2,11 +2,14 @@
 
 namespace Micromus\KafkaBusRepeater\Testing\Repositories;
 
+use Micromus\KafkaBus\Interfaces\Consumers\Messages\WorkerConsumerMessageInterface;
 use Micromus\KafkaBusRepeater\Interfaces\ConsumerMessageFailedRepositoryInterface;
+use Micromus\KafkaBusRepeater\Interfaces\Messages\FailedConsumerMessageInterface;
 use Micromus\KafkaBusRepeater\Messages\FailedConsumerMessage;
 
 class ArrayConsumerMessageFailedRepository implements ConsumerMessageFailedRepositoryInterface
 {
+    private int $id = 1;
     /**
      * @param FailedConsumerMessage[] $repeatConsumerMessages
      */
@@ -20,9 +23,17 @@ class ArrayConsumerMessageFailedRepository implements ConsumerMessageFailedRepos
         return $this->repeatConsumerMessages[0] ?? null;
     }
 
-    public function save(FailedConsumerMessage $consumerMessage): void
+    public function save(WorkerConsumerMessageInterface $message): FailedConsumerMessageInterface
     {
-        $this->repeatConsumerMessages[] = $consumerMessage;
+        $failedConsumerMessage = new FailedConsumerMessage(
+            id: (string) $this->id++,
+            workerName: $message->workerName(),
+            message: $message->original()
+        );
+
+        $this->repeatConsumerMessages[] = $failedConsumerMessage;
+
+        return $failedConsumerMessage;
     }
 
     public function delete(string $id): void

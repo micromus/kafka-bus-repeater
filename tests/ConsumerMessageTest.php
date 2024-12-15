@@ -13,7 +13,6 @@ use Micromus\KafkaBus\Testing\Connections\ConnectionRegistryFaker;
 use Micromus\KafkaBus\Testing\Consumers\MessageBuilder;
 use Micromus\KafkaBus\Topics\Topic;
 use Micromus\KafkaBus\Topics\TopicRegistry;
-use Micromus\KafkaBus\Uuid\RandomUuidGenerator;
 use Micromus\KafkaBusRepeater\Middlewares\ConsumerMessageCommiterMiddleware;
 use Micromus\KafkaBusRepeater\Middlewares\ConsumerMessageFailedSaverMiddleware;
 use Micromus\KafkaBusRepeater\Repeaters\Repeater;
@@ -54,7 +53,6 @@ test('can consume message', function () {
     $resolver = new RepeaterResolver(
         $consumerMessageRepository,
         new ArrayConsumerMessageRepository(),
-        new RandomUuidGenerator(),
         new BusLogger(new NullLogger())
     );
 
@@ -157,7 +155,6 @@ test('consume message not read if message already read', function () {
     $resolver = new RepeaterResolver(
         new ArrayConsumerMessageFailedRepository(),
         $consumerMessageRepository,
-        new RandomUuidGenerator(),
         new BusLogger(new NullLogger())
     );
 

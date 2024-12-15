@@ -4,7 +4,6 @@ namespace Micromus\KafkaBusRepeater\Testing;
 
 use Micromus\KafkaBus\Interfaces\BusLoggerInterface;
 use Micromus\KafkaBus\Interfaces\ResolverInterface;
-use Micromus\KafkaBus\Uuid\UuidGeneratorInterface;
 use Micromus\KafkaBusRepeater\Interfaces\ConsumerMessageFailedRepositoryInterface;
 use Micromus\KafkaBusRepeater\Interfaces\ConsumerMessageRepositoryInterface;
 use Micromus\KafkaBusRepeater\Messages\FailedConsumerMessageSaver;
@@ -16,7 +15,6 @@ class RepeaterResolver implements ResolverInterface
     public function __construct(
         protected ConsumerMessageFailedRepositoryInterface $consumerMessageFailedRepository,
         protected ConsumerMessageRepositoryInterface $consumerMessageRepository,
-        protected UuidGeneratorInterface $uuidGenerator,
         protected BusLoggerInterface $logger
     ) {
     }
@@ -33,10 +31,7 @@ class RepeaterResolver implements ResolverInterface
     private function resolveConsumerMessageFailedSaverMiddleware(): ConsumerMessageFailedSaverMiddleware
     {
         return new ConsumerMessageFailedSaverMiddleware(
-            new FailedConsumerMessageSaver(
-                $this->consumerMessageFailedRepository,
-                $this->uuidGenerator
-            ),
+            new FailedConsumerMessageSaver($this->consumerMessageFailedRepository),
             $this->logger
         );
     }
