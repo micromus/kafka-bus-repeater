@@ -1,10 +1,10 @@
 <?php
 
-namespace Micromus\KafkaBusRepeater\Interfaces\Repeaters;
+namespace Micromus\KafkaBusRepeater\Interfaces\Consumers;
 
 use Micromus\KafkaBusRepeater\Exceptions\ConsumerMessageFailedException;
 
-interface RepeaterStreamInterface
+interface RepeaterConsumerStreamInterface
 {
     /**
      * @return void

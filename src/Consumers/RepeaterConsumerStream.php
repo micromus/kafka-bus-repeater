@@ -1,19 +1,19 @@
 <?php
 
-namespace Micromus\KafkaBusRepeater\Repeaters;
+namespace Micromus\KafkaBusRepeater\Consumers;
 
 use Micromus\KafkaBusRepeater\Interfaces\ConsumerMessageFailedRepositoryInterface;
-use Micromus\KafkaBusRepeater\Interfaces\Repeaters\RepeaterInterface;
-use Micromus\KafkaBusRepeater\Interfaces\Repeaters\RepeaterStreamInterface;
+use Micromus\KafkaBusRepeater\Interfaces\Consumers\RepeaterConsumerInterface;
+use Micromus\KafkaBusRepeater\Interfaces\Consumers\RepeaterConsumerStreamInterface;
 
-class RepeaterStream implements RepeaterStreamInterface
+class RepeaterConsumerStream implements RepeaterConsumerStreamInterface
 {
     protected bool $forceStop = false;
 
     public function __construct(
-        protected RepeaterInterface $repeater,
+        protected RepeaterConsumerInterface                $repeater,
         protected ConsumerMessageFailedRepositoryInterface $consumerMessageFailedRepository,
-        protected $timeToSleep = 60
+        protected                                          $timeToSleep = 60
     ) {
     }
 

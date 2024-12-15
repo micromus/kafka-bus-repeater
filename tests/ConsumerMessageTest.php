@@ -15,8 +15,8 @@ use Micromus\KafkaBus\Topics\Topic;
 use Micromus\KafkaBus\Topics\TopicRegistry;
 use Micromus\KafkaBusRepeater\Middlewares\ConsumerMessageCommiterMiddleware;
 use Micromus\KafkaBusRepeater\Middlewares\ConsumerMessageFailedSaverMiddleware;
-use Micromus\KafkaBusRepeater\Repeaters\Repeater;
-use Micromus\KafkaBusRepeater\Repeaters\RepeaterHandlers;
+use Micromus\KafkaBusRepeater\Consumers\RepeaterConsumer;
+use Micromus\KafkaBusRepeater\Consumers\RepeaterHandlers;
 use Micromus\KafkaBusRepeater\Testing\Messages\ThrowableConsumerHandler;
 use Micromus\KafkaBusRepeater\Testing\RepeaterResolver;
 use Micromus\KafkaBusRepeater\Testing\Repositories\ArrayConsumerMessageFailedRepository;
@@ -103,7 +103,7 @@ test('can consume message', function () {
             'headers' => ['foo' => 'bar'],
         ]);
 
-    $repeater = new Repeater(
+    $repeater = new RepeaterConsumer(
         $consumerMessageRepository,
         new RepeaterHandlers(
             $workerRegistry,

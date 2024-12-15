@@ -1,14 +1,14 @@
 <?php
 
-namespace Micromus\KafkaBusRepeater\Repeaters;
+namespace Micromus\KafkaBusRepeater\Consumers;
 
 use Micromus\KafkaBusRepeater\Exceptions\ConsumerMessageFailedException;
 use Micromus\KafkaBusRepeater\Interfaces\ConsumerMessageFailedRepositoryInterface;
 use Micromus\KafkaBusRepeater\Interfaces\Messages\FailedConsumerMessageInterface;
-use Micromus\KafkaBusRepeater\Interfaces\Repeaters\RepeaterInterface;
+use Micromus\KafkaBusRepeater\Interfaces\Consumers\RepeaterConsumerInterface;
 use Throwable;
 
-class Repeater implements RepeaterInterface
+class RepeaterConsumer implements RepeaterConsumerInterface
 {
     public function __construct(
         protected ConsumerMessageFailedRepositoryInterface $consumerMessageRepository,

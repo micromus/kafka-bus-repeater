@@ -1,6 +1,6 @@
 <?php
 
-namespace Micromus\KafkaBusRepeater\Repeaters;
+namespace Micromus\KafkaBusRepeater\Consumers;
 
 use Micromus\KafkaBus\Bus\Listeners\Workers\WorkerRegistry;
 use Micromus\KafkaBus\Interfaces\Consumers\Messages\ConsumerMessageHandlerFactoryInterface;
