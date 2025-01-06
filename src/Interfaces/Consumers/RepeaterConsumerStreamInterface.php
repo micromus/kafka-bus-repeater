@@ -11,7 +11,7 @@ interface RepeaterConsumerStreamInterface
      *
      * @throws ConsumerMessageFailedException
      */
-    public function process(): void;
+    public function process(bool $once = false): void;
 
     public function forceStop(): void;
 }

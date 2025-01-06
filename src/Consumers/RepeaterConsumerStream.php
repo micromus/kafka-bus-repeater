@@ -6,15 +6,18 @@ use Micromus\KafkaBusRepeater\Interfaces\ConsumerMessageFailedRepositoryInterfac
 use Micromus\KafkaBusRepeater\Interfaces\Consumers\RepeaterConsumerInterface;
 use Micromus\KafkaBusRepeater\Interfaces\Consumers\RepeaterConsumerStreamInterface;
 
-class RepeaterConsumerStream implements RepeaterConsumerStreamInterface
+final class RepeaterConsumerStream implements RepeaterConsumerStreamInterface
 {
     protected bool $forceStop = false;
 
+    protected float $nextAt;
+
     public function __construct(
-        protected RepeaterConsumerInterface                $repeater,
+        protected RepeaterConsumerInterface $repeater,
         protected ConsumerMessageFailedRepositoryInterface $consumerMessageFailedRepository,
         protected $timeToSleep = 60
     ) {
+        $this->nextAt = microtime(true);
     }
 
     public function forceStop(): void
@@ -22,14 +25,18 @@ class RepeaterConsumerStream implements RepeaterConsumerStreamInterface
         $this->forceStop = true;
     }
 
-    public function process(): void
+    public function process(bool $once = false): void
     {
         do {
+            if ($this->nextAt > microtime(true)) {
+                continue;
+            }
+
             $repeatConsumerMessage = $this->consumerMessageFailedRepository
                 ->get();
 
             if (is_null($repeatConsumerMessage)) {
-                sleep($this->timeToSleep);
+                $this->nextAt += $this->timeToSleep;
 
                 continue;
             }
@@ -37,6 +44,6 @@ class RepeaterConsumerStream implements RepeaterConsumerStreamInterface
             $this->repeater
                 ->handle($repeatConsumerMessage);
         }
-        while (!$this->forceStop);
+        while (!$this->forceStop && !$once);
     }
 }

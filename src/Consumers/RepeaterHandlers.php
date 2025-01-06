@@ -6,7 +6,7 @@ use Micromus\KafkaBus\Bus\Listeners\Workers\WorkerRegistry;
 use Micromus\KafkaBus\Interfaces\Consumers\Messages\ConsumerMessageHandlerFactoryInterface;
 use Micromus\KafkaBus\Interfaces\Consumers\Messages\ConsumerMessageHandlerInterface;
 
-class RepeaterHandlers
+final class RepeaterHandlers
 {
     protected array $handlers = [];
 

@@ -8,7 +8,7 @@ use Micromus\KafkaBusRepeater\Interfaces\Messages\FailedConsumerMessageInterface
 use Micromus\KafkaBusRepeater\Interfaces\Consumers\RepeaterConsumerInterface;
 use Throwable;
 
-class RepeaterConsumer implements RepeaterConsumerInterface
+final class RepeaterConsumer implements RepeaterConsumerInterface
 {
     public function __construct(
         protected ConsumerMessageFailedRepositoryInterface $consumerMessageRepository,
